@@ -1,0 +1,6 @@
+<apex:page controller="EventChecker" tabStyle="Opportunity" action="{!pageLoad}">
+    <apex:pageBlock >
+        <apex:messages />
+    </apex:pageBlock>
+    <apex:outputLink value="/{!event.whatId}">Continue</apex:outputLink>
+</apex:page>

@@ -1,0 +1,496 @@
+<apex:page controller="NewLeadAppointmentController"
+           showHeader="false" sidebar="false" action="{!pageLoad}">
+
+    <link href="{!$Resource.cssBootstrap}" rel="stylesheet" />
+    <link href="{!$Resource.FullCalendarCss}" rel="stylesheet" />
+    <link href="{!$Resource.FullCalendarPrintCss}" rel="stylesheet" media="print" />
+    <apex:includeScript value="{!$Resource.jsMoment}"/>
+    <apex:includeScript value="{!$Resource.jsJQuery}"/>
+    <apex:includeScript value="{!$Resource.jsJQueryUI}"/>
+    <apex:includeScript value="{!$Resource.jsFullCalendar}"/>
+
+    <apex:includeScript value="{!$Resource.jsPopper}"/>
+    <apex:includeScript value="{!$Resource.jsBootstrap}"/>
+    
+    <script>
+    
+        var newEventAdded = false;
+
+        $(document).ready(function() {
+
+            $('#calendar').fullCalendar({
+
+                height: "auto",
+                selectable: true,
+                allDaySlot: true,
+                allDaySlot: false,
+                minTime: "06:00:00",
+                maxTime: "21:00:00",
+                slotLabelFormat: "h:mm a",
+                slotDuration: "00:60:00",
+                defaultView: 'agendaWeek',
+
+                customButtons: {
+                  btnLastWeek: {
+                    text: '< Last Week',
+                    click: function() {
+                      $('#calendar').fullCalendar('prev');
+                    }
+                  },
+                  btnNextWeek: {
+                    text: 'Next Week >',
+                    click: function() {
+                      $('#calendar').fullCalendar('next');
+                    }
+                  }
+                }, // customButtons for Calendar Nav
+
+                header: {
+                  left: 'btnLastWeek',
+                  center: '',
+                  right: 'btnNextWeek'
+                },
+
+                select: function(start, end) {
+                  if (newEventAdded) {
+                      alert('Only one appointment can be added at this time.\n\nPlease click Save to continue.');
+                      $('#calendar').fullCalendar('unselect');
+                  } else {
+                      var userTzOffset = "{! userTzOffset }";
+                      var startDate = start.toDate();
+                      var startDateStr = (startDate.getMonth() + 1) + '/' + startDate.getDate() + '/' + startDate.getFullYear();
+                      $('#appointmentDate').text(startDateStr);
+                  
+                      var amOrPm = 'AM';
+                      var startDateHours = startDate.getHours() - userTzOffset;
+                      if (startDateHours >= 12) {
+                          amOrPm = 'PM';
+                          if (startDateHours > 12) {
+                              startDateHours -= 12;
+                          }
+                      }
+                      var endDateHours = startDateHours + 1;
+                      if (endDateHours > 12) {
+                          endDateHours -= 12;
+                      }
+                    
+                      $('#btnStartHh').text(startDateHours);
+                      $('#btnStartMm').text('0');
+                      $('#btnStartAmPm').text(amOrPm);
+                      $('#btnEndHh').text(endDateHours);
+                      $('#btnEndMm').text('0');
+                      $('#btnEndAmPm').text(endDateHours === 12 ? 'PM' : amOrPm);
+                      $('#email').text('{! Lead.Email }');
+                      $('#phone').text('{! Lead.Phone }');
+                      $('#location').text(
+                          '{! Lead.Street } {! Lead.City } {! Lead.State }  {! Lead.PostalCode } '
+                      );
+                      $('#modalSetAppointment').modal('show');
+                  }
+                },
+
+                events:
+                [
+                    <apex:repeat value="{!events}" var="e">
+                        {
+                            title: '{!e.title}',
+                            start: '{!e.startString}',
+                            end: '{!e.endString}',
+                            url: '{!e.url}',
+                            showAs: '{!e.showAs}',
+                            className: 'event-highlight'
+                        },
+                    </apex:repeat>
+                ]
+            });
+        });
+
+    </script>
+
+    <style>
+
+        #cal-options {float:left;}
+
+        #cal-legend { float:right;}
+
+        #cal-legend ul {margin:0;padding:0;list-style:none;}
+
+        #cal-legend ul li {margin:0;padding:5px;float:left;}
+
+        #cal-legend ul li span {display:block; height:16px; width:16px; margin-right:4px; float:left; border-radius:4px;}
+
+        #calendar {margin-top:20px;}
+
+        #calendar a:hover {color:#fff !important;}
+
+        .fc-event-inner {padding:3px;}
+
+        .event-highlight {background:#1797c0;border-color:#1797c0;}
+
+        .scrollable-menu {
+            height: auto;
+            max-height: 200px;
+            overflow-x: hidden;
+        }    
+    </style>
+
+    <apex:sectionHeader title="Create New Appointment"/>
+
+      <apex:pageBlock title="Customer Information">
+        <apex:pageBlockSection >
+          <apex:outputField value="{! Lead.FirstName }"/>
+          <apex:outputField value="{! Lead.LastName }"/>
+          <apex:outputField value="{! Lead.Street }"/>
+          <apex:outputField value="{! Lead.City }"/>
+          <apex:outputField value="{! Lead.State }"/>
+          <apex:outputField value="{! Lead.PostalCode }"/>
+        </apex:pageBlockSection>
+      </apex:pageBlock>
+
+      <apex:pageBlock title="Lead Owner">
+        <apex:pageBlockSection >
+          <apex:outputField value="{! Lead.Owner.FirstName }"/>
+          <apex:outputField value="{! Lead.Owner.LastName }"/>
+          <apex:outputField value="{! Lead.Owner.Phone }"/>
+          <apex:outputField value="{! Lead.Owner.Email }"/>
+        </apex:pageBlockSection>
+      </apex:pageBlock>
+
+     <apex:outputPanel id="calPanel">
+        <apex:form >
+            <div id="calendar"></div>
+        </apex:form>
+     </apex:outputPanel>
+
+    <apex:form id="formNewEvent">
+        <apex:pageBlock mode="edit" id="blockNewEvent">
+            <apex:pageMessages />
+            <apex:inputHidden value="{!newEvent.subject}" id="newEventSubject"/>
+            <apex:inputHidden value="{!newEvent.showAs}" id="newEventShowAs"/>
+            <apex:inputHidden value="{!newEvent.eventYear}" id="newEventYear"/>
+            <apex:inputHidden value="{!newEvent.eventMonth}" id="newEventMonth"/>
+            <apex:inputHidden value="{!newEvent.eventDay}" id="newEventDay"/>
+            <apex:inputHidden value="{!newEvent.startHour}" id="newEventStartHour"/>
+            <apex:inputHidden value="{!newEvent.startMinute}" id="newEventStartMinute"/>
+            <apex:inputHidden value="{!newEvent.endHour}" id="newEventEndHour"/>
+            <apex:inputHidden value="{!newEvent.endMinute}" id="newEventEndMinute"/>
+            <apex:pageBlockButtons location="bottom">
+                <apex:commandButton value="Save" action="{!save}"/>
+            </apex:pageBlockButtons>
+        </apex:pageBlock>
+    </apex:form>
+    
+  <div class="modal fade" id="modalSetAppointment" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <!--Content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" >Create New Appointment</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body mb-1">
+                <div class="options text-center text-md-left mt-1">
+                    <p>Assigned To: <strong><span id="assignedTo"></span></strong></p>
+                    <p>Appointment Date: 
+                        <strong><span id="appointmentDate"></span></strong></p>
+                    
+                    <!-- start time picker -->
+                    <div style="margin-bottom: 10px;">   
+                      <span style="margin-right:5px">Start Time: </span>
+                      <div class="btn-group">
+                        <button id="btnStartHh" type="button" class="dropdown-toggle" data-toggle="dropdown">1 <span class="caret"></span></button>
+                        <ul class="dropdown-menu scrollable-menu" role="menu">
+                        <apex:repeat value="{!hours}" var="hh">
+                          <li><apex:outputText value="{!hh}"/></li>
+                        </apex:repeat>
+                        </ul>
+                      </div>
+                      <div class="btn-group">
+                        <button id="btnStartMm" type="button" class="dropdown-toggle" data-toggle="dropdown">1 <span class="caret"></span></button>
+                        <ul class="dropdown-menu scrollable-menu" role="menu">
+                        <apex:repeat value="{!minutes}" var="mm">
+                          <li><apex:outputText value="{!mm}"/></li>
+                        </apex:repeat>
+                        </ul>
+                      </div>
+                      <div class="btn-group">
+                        <button id="btnStartAmPm" type="button" class="dropdown-toggle" data-toggle="dropdown">AM <span class="caret"></span></button>
+                        <ul class="dropdown-menu" role="menu">
+                        <apex:repeat value="{!amorpm}" var="ampm">
+                          <li><apex:outputText value="{!ampm}"/></li>
+                        </apex:repeat>
+                        </ul>
+                      </div>
+                    </div>
+                    <!-- start time picker -->
+
+                    <!-- end time picker -->
+                    <div style="margin-bottom: 10px;">   
+                      <span style="margin-right:5px">End Time: </span>
+                      <div class="btn-group">
+                        <button id="btnEndHh" type="button" class="dropdown-toggle" data-toggle="dropdown">1 <span class="caret"></span></button>
+                        <ul class="dropdown-menu scrollable-menu" role="menu">
+                        <apex:repeat value="{!hours}" var="hh">
+                          <li><apex:outputText value="{!hh}"/></li>
+                        </apex:repeat>
+                        </ul>
+                      </div>
+                      <div class="btn-group">
+                        <button id="btnEndMm" type="button" class="dropdown-toggle" data-toggle="dropdown">1 <span class="caret"></span></button>
+                        <ul class="dropdown-menu scrollable-menu" role="menu">
+                        <apex:repeat value="{!minutes}" var="mm">
+                          <li><apex:outputText value="{!mm}"/></li>
+                        </apex:repeat>
+                        </ul>
+                      </div>
+                      <div class="btn-group">
+                        <button id="btnEndAmPm" type="button" class="dropdown-toggle" data-toggle="dropdown">AM <span class="caret"></span></button>
+                        <ul class="dropdown-menu" role="menu">
+                        <apex:repeat value="{!amorpm}" var="ampm">
+                          <li><apex:outputText value="{!ampm}"/></li>
+                        </apex:repeat>
+                        </ul>
+                      </div>
+                    </div>
+                    <!-- end time picker -->
+                    
+                    <p>Email: <strong><span id="email"></span></strong></p>
+                    <p>Phone: <strong><span id="phone"></span></strong></p>
+
+                    <p>Subject: 
+                        <strong>
+                        <span id="subject"></span>
+                        <a data-toggle="modal" href="#modalSubject" style="margin-left: 4px;">[ Update ]</a>
+                        </strong>
+                    </p>
+
+                    <p>Show Time As: 
+                        <strong>
+                        <span id="showTimeAs"></span>
+                        <a data-toggle="modal" href="#modalShowTimeAs" style="margin-left: 4px;">[ Update ]</a>
+                        </strong>
+                    </p>
+
+                    <p>Location: <strong>
+                        <span id="location"></span></strong></p>
+                </div>
+
+                <div class="text-center mt-2">
+                    <button id="btnSaveAppointment" data-dismiss="modal">Save</button>
+                </div>
+            </div>
+        </div>
+        <!--/.Content-->
+      </div>
+  </div>
+    
+  <!-- Show Time As -->
+  <div class="modal fade" id="modalShowTimeAs" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="headerShowTimeAs">Show Time As</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body mb-1">
+                <div id="divGroupShowTimeAs" class="options text-center text-md-left mt-1">
+                    <!--Radio group-->
+                    <div class="form-group">
+                        <input name="rdoShowTimeAs" type="radio" id="rdoBusy" value="Busy"/>
+                        <label for="rdoBusy">Busy</label>
+                    </div>
+
+                    <div class="form-group">
+                        <input name="rdoShowTimeAs" type="radio" id="rdoOOO" value="Out of Office"/>
+                        <label for="rdoOOO">Out of Office</label>
+                    </div>
+
+                    <div class="form-group">
+                        <input name="rdoShowTimeAs" type="radio" id="rdoFree" value="Free"/>
+                        <label for="rdoFree">Free</label>
+                    </div>
+                    <!--Radio group-->
+                </div>
+
+                <div class="text-center mt-2">
+                    <button id="btnShowTimeAs" data-dismiss="modal">Select</button>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+  <!-- Show Time As -->
+    
+  <!-- Subject -->
+  <div class="modal fade" id="modalSubject" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Appointment Subject</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body mb-1">
+                <div id="divGroupSubject" class="options text-center text-md-left mt-1">
+                    <!--Radio group-->
+                    <div class="form-group">
+                        <input name="rdoSubject" type="radio" id="rdoCall" value="Call"/>
+                        <label for="rdoCall">Call</label>
+                    </div>
+                    <div class="form-group">
+                        <input name="rdoSubject" type="radio" id="rdoEmail" value="Email"/>
+                        <label for="rdoEmail">Email</label>
+                    </div>
+                    <div class="form-group">
+                        <input name="rdoSubject" type="radio" id="rdoMeeting" value="Meeting"/>
+                        <label for="rdoMeeting">Meeting</label>
+                    </div>
+                    <div class="form-group">
+                        <input name="rdoSubject" type="radio" id="rdoSendLetter" value="Send Letter/Quote"/>
+                        <label for="rdoSendLetter">Send Letter/Quote</label>
+                    </div>
+                    <div class="form-group">
+                        <input name="rdoSubject" type="radio" id="rdoOther" value="Other"/>
+                        <label for="rdoOther">Other</label>
+                    </div>
+                    <!--Radio group-->
+                </div>
+
+                <div class="text-center mt-2">
+                    <button id="btnSubject" data-dismiss="modal">Select</button>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+  <!-- Subject -->    
+    
+    <script>
+        $(document).ready (function (){
+            $('.dropdown-toggle').dropdown();
+            $('.dropdown-menu').on('click', 'li', function() {
+                var target = $(this).closest('.btn-group').find('.dropdown-toggle')
+                var selectedVal = $(this).html();
+                var htmlText = selectedVal;
+                target.html(htmlText);
+            });
+
+            // user has created an appointment in the calendar
+            $('#btnSaveAppointment').click(function() {
+                
+                var eventFullDate = $('#appointmentDate').text().split('/');
+                document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventMonth}').value = eventFullDate[0];
+                document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventDay}').value = eventFullDate[1];
+                document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventYear}').value = eventFullDate[2];
+                
+                var startHour = parseInt($('#btnStartHh').text());
+                var startAmPm = $('#btnStartAmPm').text();
+                if (startAmPm === 'PM' && startHour < 12) {
+                    startHour += 12;
+                }
+                document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventStartHour}').value = startHour;
+                document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventStartMinute}').value = $('#btnStartMm').text();
+                
+                var endHour = parseInt($('#btnEndHh').text());
+                var endAmPm = $('#btnEndAmPm').text();
+                if (endAmPm === 'PM' && endHour < 12) {
+                    endHour += 12;
+                }
+                
+                document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventEndHour}').value = endHour;
+                document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventEndMinute}').value = $('#btnEndMm').text();
+
+                if (startHour < 6 || endHour > 20
+                    || (startAmPm === 'AM' && startHour === 12)
+                    || (endAmPm === 'AM' && endHour === 12)) {
+                    alert('Please set a start and end time between 6AM and 8PM for the appointment.');
+                    return false;
+                } else if (startHour >= endHour) {
+                    alert('Appointment end time must be later than start time.');
+                    return false;
+                } else {
+                    var eventSubject = $('#subject').text();
+                    document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventSubject}').value = $('#subject').text();
+                    document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventShowAs}').value = $('#showTimeAs').text();
+                
+                    // just make a unique event id
+                    var eventId = Date.now();
+                    var leadName = '{! Lead.FirstName } {! Lead.LastName }';
+                    var eventTitle = eventSubject + ' ' + leadName; 
+                
+                    var eventDate = eventFullDate[2] + '-' + zeroPadDateVal(eventFullDate[0]) + '-' + zeroPadDateVal(eventFullDate[1]);
+                    var eventStart = eventDate + 'T' + zeroPadDateVal(startHour)
+                        + ':' + zeroPadDateVal(document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventStartMinute}').value) + ':00';
+                    var eventEnd = eventDate + 'T' + zeroPadDateVal(endHour)
+                        + ':' + zeroPadDateVal(document.getElementById('{!$Component.formNewEvent.blockNewEvent.newEventEndMinute}').value) + ':00';
+                    
+                    var allEvents = $('#calendar').fullCalendar('clientEvents');
+                    if (allEvents !== 'undefined' && allEvents.length > 0) {
+                        var newStart = moment(eventStart);
+                        var newEnd = moment(eventEnd);
+                        for (var i = 0; i < allEvents.length; i++) {
+                            var savedEvent = allEvents[i];
+                            var savedStart = moment(savedEvent.start);
+                            var savedEnd = moment(savedEvent.end);
+                            if ((newStart.isBefore(savedEnd) && newStart.isAfter(savedStart))
+                               || (newEnd.isBefore(savedEnd) && newEnd.isAfter(savedStart))
+                               || (savedStart.isSameOrAfter(newStart) && savedEnd.isSameOrBefore(newEnd))) {
+                                var r = confirm('You are double-booking this appointment with another scheduled appointment.\n\nProceed setting this appointment?');
+                                if (r === true) {
+                                    break;
+                                } else {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    
+                    var event = {
+                        id: eventId,
+                        title: eventTitle,
+                        start: eventStart,
+                        end: eventEnd,
+                        className: 'event-highlight'
+                    };
+                    newEventAdded = true;
+                    $('#calendar').fullCalendar('renderEvent', event, true);
+                }
+                
+            });
+
+            // listen to 'Show Time As' selection
+            $('#btnShowTimeAs').click(function() {
+                var showTimeAs = $('#divGroupShowTimeAs input:radio:checked').val();
+                $('#showTimeAs').text(showTimeAs);
+            });
+
+            // listen to 'Subject' selection
+            $('#btnSubject').click(function() {
+                var subject = $('#divGroupSubject input:radio:checked').val();
+                $('#subject').text(subject);
+            });
+            
+            $('#showTimeAs').text('Busy');
+            $('#subject').text('Meeting');
+      });
+
+      $('#modalSetAppointment').on('show.bs.modal', function(e) {
+          var leadOwner = '{! Lead.Owner.FirstName } {! Lead.Owner.LastName }';
+          $(e.currentTarget).find('#assignedTo').text(leadOwner);
+      });
+    
+      function zeroPadDateVal(dateVal) {
+          var val = typeof dateVal === 'string' ? parseInt(dateVal) : dateVal;
+          return val < 10 ? ('0' + val) : ('' + val);
+      }
+    </script>
+    
+</apex:page>
