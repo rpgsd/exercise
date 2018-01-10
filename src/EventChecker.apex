@@ -1,3 +1,9 @@
+//
+//
+// Controller for retrieving any previous or later event against the newly saved event from NewLeadAppointment.
+// The newly converted Contact's address is checked against addresses of previous or later events. The page will
+// add a warning message to the user if the travel time is greater than the gap between appointments + 30 minutes.
+//
 public class EventChecker {
 
     private final Integer BUFFER_TIME = 1800; // 30 minutes;

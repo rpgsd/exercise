@@ -1,3 +1,8 @@
+//
+// Main controller of the exercise. Responsible for getting the data (models) for the UI calender.
+// Upon successful 'Save', the user is taken to an intermediary page, EventChecker, which shows
+// or warns a user if their travel time from one event to or from the new event is cutting it close.
+//
 public class NewLeadAppointmentController {
 
     String dtFormat = 'yyyy-MM-dd\'T\'HH:mm:ssZ';

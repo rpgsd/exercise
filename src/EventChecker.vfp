@@ -1,3 +1,6 @@
+//
+// Display any message we get from EventChecker controller.
+//
 <apex:page controller="EventChecker" tabStyle="Opportunity" action="{!pageLoad}">
     <apex:pageBlock >
         <apex:messages />

@@ -1,3 +1,6 @@
+//
+// Visualforce Page that serves as the 'view' for the calendar mini-app/component.
+//
 <apex:page controller="NewLeadAppointmentController"
            showHeader="false" sidebar="false" action="{!pageLoad}">
 
